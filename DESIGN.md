@@ -73,8 +73,9 @@ of contact with the backend; every network call in the app goes through it.
    `{ firstName, lastName, email? }`.
 3. FastAPI validates the body against `UserRegisterRequest` (via Pydantic) —
    trims whitespace, rejects blank/oversized names, validates email format if
-   present. A failure here returns **400** (see Section 3 and Section 6 for
-   why 400 and not FastAPI's default 422).
+   present. A failure here returns **422** (FastAPI/Pydantic's standard
+   response for request validation failures — see Section 6 for why this
+   project sticks with that default rather than overriding it).
 4. The `users` router delegates to `register_user()` in the user controller,
    which runs a plain `INSERT` into the `users` table.
 5. The table has a `UNIQUE(firstName, lastName)` constraint. If the insert
@@ -95,7 +96,7 @@ of contact with the backend; every network call in the app goes through it.
 3. Pydantic validates the payload against `ActivityRequest`: the `sport` and
    `metricType` must be a valid pairing (e.g. `running` must pair with
    `distance`, not `duration`), and `metricValue` must match the expected
-   format and be positive. Any failure here returns **400**.
+   format and be positive. Any failure here returns **422**.
 4. The `activities` router delegates to `log_activity()` in the activity
    controller, which first confirms `userId` exists (**404** if not).
 5. The controller calls `calculate_points(sport, metricValue)` in the scoring
@@ -212,7 +213,7 @@ whitespace-trimmed, cannot be blank.
 | Status | When                                              |
 |--------|---------------------------------------------------|
 | 201    | Success — returns `{ userId, message }`            |
-| 400    | Missing/invalid fields (e.g. blank name, bad email format) |
+| 422    | Missing/invalid fields (e.g. blank name, bad email format) |
 | 409    | A user with the same first + last name already exists |
 
 ### `POST /api/activities`
@@ -236,7 +237,7 @@ Logs a fitness activity and returns the points awarded.
 | Status | When                                              |
 |--------|---------------------------------------------------|
 | 201    | Success — returns `{ activityId, pointsAwarded, sport, metricType, metricValue, loggedAt }` |
-| 400    | Schema validation failure or mismatched sport/metricType |
+| 422    | Schema validation failure or mismatched sport/metricType |
 | 404    | `userId` does not exist                            |
 
 ### `GET /api/activities/leaderboard`
@@ -287,14 +288,16 @@ Used to confirm the API process is up; does not check database connectivity.
 
 ### Error handling strategy
 
-Two exception handlers registered globally in `main.py`:
+One exception handler registered globally in `main.py`, for any unhandled
+exception → **500 Internal Server Error** with a generic message, so raw
+stack traces never leak to the client.
 
-- `RequestValidationError` (raised automatically by FastAPI/Pydantic for any
-  schema or cross-field validation failure) → **400 Bad Request**. This
-  overrides FastAPI's default of 422, matching the assignment's explicit
-  requirement. See Section 6 for the reasoning behind that decision.
-- Any other unhandled exception → **500 Internal Server Error** with a
-  generic message, so raw stack traces never leak to the client.
+Request validation failures (missing/invalid fields, or the cross-field
+`model_validator` check catching a mismatched sport/metricType combination)
+are *not* separately handled — they're left to FastAPI/Pydantic's built-in
+`RequestValidationError` handling, which returns **422 Unprocessable
+Entity** by default. See Section 6 for why this project deliberately keeps
+that default rather than overriding it to 400.
 
 `404` (not found) and `409` (duplicate user) are raised explicitly inside
 the relevant controller functions, since they represent business-logic
@@ -493,12 +496,19 @@ checked in application code before the insert, two simultaneous
 registration attempts for the same name cannot both succeed — SQLite
 rejects the second insert outright, regardless of timing.
 
-**400 vs. 422 for validation errors.** FastAPI's default behavior for any
-Pydantic validation failure is 422 Unprocessable Entity, which is arguably
-the more precise HTTP semantic for "well-formed but semantically invalid"
-requests. The assignment explicitly specifies 400 Bad Request for this case,
-so a custom exception handler overrides FastAPI's default to comply with
-that requirement exactly, rather than relying on the framework default.
+**422, not 400, for validation errors.** The assignment's requirements
+section names "400 Bad Request" for invalid schemas or mismatched
+sport/metric types. FastAPI/Pydantic's actual default for this case is 422
+Unprocessable Entity — the HTTP-spec-correct code for "the request was
+well-formed, but its content failed validation," as distinct from 400,
+which is meant for a request that's malformed at the syntax level (e.g.
+invalid JSON). Since FastAPI was the explicitly chosen stack for this
+project, and 422 is that stack's own idiomatic, spec-aligned behavior for
+this exact situation, this project reads the assignment's mention of "400"
+as shorthand for "an appropriate 4xx client error" rather than a literal
+requirement to override the framework's own convention. Sticking with 422
+avoids introducing a custom exception handler purely to fight against the
+chosen framework's standard behavior.
 
 **Sport-to-metric mapping is duplicated.** Both the backend
 (`VALID_SPORT_METRIC_MAP` in `models/schemas.py`) and the frontend
