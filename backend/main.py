@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse
 
 from database import init_db
 
+from routers import users
+
 load_dotenv()
 
 PORT: int = int(os.getenv("PORT", "8000"))
@@ -71,7 +73,7 @@ app.add_middleware(
 
 # ─── Routers ────────────────────────────────────────────────
 # Uncomment each line as we create the files
-# app.include_router(users.router,      prefix="/api/users",      tags=["Users"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 # app.include_router(activities.router, prefix="/api/activities", tags=["Activities"])
 # ────────────────────────────────────────────────────────────
 
