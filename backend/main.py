@@ -4,7 +4,8 @@ from typing import AsyncGenerator
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -76,6 +77,42 @@ app.add_middleware(
 app.include_router(users.router,      prefix="/api/users",       tags=["Users"])
 app.include_router(activities.router, prefix="/api/activities",  tags=["Activities"])
 # ────────────────────────────────────────────────────────────
+
+
+# ─── Validation Exception Handler ───────────────────────────
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    """
+    Overrides FastAPI's default 422 response for request validation
+    failures, returning 400 Bad Request instead.
+
+    Covers both:
+        - Malformed/invalid request schemas (missing or wrong-typed fields)
+        - Cross-field validation failures (e.g. mismatched sport/metricType
+          combinations, or a metricValue that doesn't match the expected
+          format for its metricType), raised via model_validator in
+          models/schemas.py.
+
+    The response shape matches the ErrorResponse model used by every
+    other error path in the API, nested under "detail" for consistency
+    with how HTTPException responses are already structured.
+    """
+    first_error = exc.errors()[0] if exc.errors() else None
+    message = first_error["msg"] if first_error else "Invalid request body."
+
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={
+            "detail": {
+                "error": "Validation error",
+                "message": message,
+            }
+        },
+    )
 
 
 # ─── Global Exception Handler ───────────────────────────────

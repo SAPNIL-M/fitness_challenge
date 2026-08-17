@@ -22,7 +22,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     responses={
         409: {"model": ErrorResponse, "description": "User already exists"},
-        422: {"description": "Validation error — invalid request body"},
+        400: {"model": ErrorResponse, "description": "Invalid request body"},
     },
     summary="Register a new user",
     description=(

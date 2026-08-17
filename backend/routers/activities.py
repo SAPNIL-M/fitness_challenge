@@ -22,8 +22,7 @@ router = APIRouter()
     status_code=status.HTTP_201_CREATED,
     responses={
         404: {"model": ErrorResponse, "description": "User not found"},
-        400: {"model": ErrorResponse, "description": "Invalid sport and metric combination"},
-        422: {"description": "Validation error — invalid request body"},
+        400: {"model": ErrorResponse, "description": "Invalid request body or mismatched sport/metric combination"},
     },
     summary="Log a fitness activity",
     description=(
