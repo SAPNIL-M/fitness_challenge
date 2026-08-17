@@ -1,8 +1,25 @@
-import { Routes, Route, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import Leaderboard from './pages/Leaderboard'
 import Dashboard from './pages/Dashboard'
+import Register from './pages/Register'
+import { getCurrentUser, clearCurrentUser } from './utils/currentUser'
 
 export default function App() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser())
+
+  useEffect(() => {
+    setCurrentUserState(getCurrentUser())
+  }, [location])
+
+  function handleSwitchUser() {
+    clearCurrentUser()
+    setCurrentUserState(null)
+    navigate('/register')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -33,18 +50,42 @@ export default function App() {
             >
               Leaderboard
             </NavLink>
-            <NavLink
-              to="/dashboard/1"
-              className={({ isActive }) =>
-                `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-indigo-50 text-indigo-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`
-              }
-            >
-              My Dashboard
-            </NavLink>
+
+            {currentUser ? (
+              <>
+                <NavLink
+                  to={`/dashboard/${currentUser.userId}`}
+                  className={({ isActive }) =>
+                    `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  My Dashboard
+                </NavLink>
+                <button
+                  onClick={handleSwitchUser}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                >
+                  Switch user
+                </button>
+              </>
+            ) : (
+              <NavLink
+                to="/register"
+                className={({ isActive }) =>
+                  `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`
+                }
+              >
+                Register
+              </NavLink>
+            )}
           </div>
 
         </div>
@@ -54,6 +95,7 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         <Routes>
           <Route path="/"                  element={<Leaderboard />} />
+          <Route path="/register"          element={<Register />} />
           <Route path="/dashboard/:userId" element={<Dashboard />} />
         </Routes>
       </main>
