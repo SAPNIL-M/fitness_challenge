@@ -67,6 +67,7 @@ def init_db() -> None:
                 firstName   TEXT NOT NULL,
                 lastName    TEXT NOT NULL,
                 email       TEXT,
+                previousRank  INTEGER DEFAULT NULL,
                 createdAt   DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(firstName, lastName)
             )
