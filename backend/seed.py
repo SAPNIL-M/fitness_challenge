@@ -4,7 +4,13 @@ from datetime import datetime, timedelta
 
 from database import get_connection, init_db
 from services.scoring_service import calculate_points
+from services.auth_service import hash_password
 from models.schemas import SportType
+
+# Every seed user gets this same password, purely for local demo/testing
+# convenience — e.g. login as Alice Johnson with this password to see
+# the "Add Activity" button and full authenticated experience.
+SEED_PASSWORD: str = "Password123!"
 
 
 # ─── Seed Data ───────────────────────────────────────────────
@@ -107,13 +113,19 @@ def _clear_existing_data(conn: sqlite3.Connection) -> None:
 def _seed_users(conn: sqlite3.Connection) -> None:
     """
     Insert all seed users into the database.
+
+    Every seed user is given the same hashed SEED_PASSWORD so they can
+    all be logged into locally for testing — hashed the same way real
+    registrations are, via the same auth_service used by the API.
     """
+    hashed_password: str = hash_password(SEED_PASSWORD)
+
     conn.executemany(
-        "INSERT INTO users (firstName, lastName, email) VALUES (?, ?, ?)",
-        [(u["firstName"], u["lastName"], u["email"]) for u in USERS],
+        "INSERT INTO users (firstName, lastName, email, password) VALUES (?, ?, ?, ?)",
+        [(u["firstName"], u["lastName"], u["email"], hashed_password) for u in USERS],
     )
     conn.commit()
-    print(f"  Inserted {len(USERS)} users")
+    print(f"  Inserted {len(USERS)} users (password for all: '{SEED_PASSWORD}')")
 
 
 def _seed_activities(conn: sqlite3.Connection) -> None:

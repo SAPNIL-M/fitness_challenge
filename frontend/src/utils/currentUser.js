@@ -11,10 +11,14 @@ export function getCurrentUser() {
   }
 }
 
-export function setCurrentUser(userId, name) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId, name }))
+export function setCurrentUser(userId, name, accessToken) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ userId, name, accessToken }))
 }
 
 export function clearCurrentUser() {
   localStorage.removeItem(STORAGE_KEY)
+}
+
+export function getAccessToken() {
+  return getCurrentUser()?.accessToken ?? null
 }

@@ -6,12 +6,15 @@ from fastapi import HTTPException, status
 from models.schemas import (
     UserRegisterRequest,
     UserRegisterResponse,
+    UserLoginRequest,
+    UserLoginResponse,
     DashboardResponse,
     ActivityHistoryItem,
     SportBreakdown,
     PointsOverTime,
     SportType,
 )
+from services.auth_service import hash_password, verify_password, create_access_token
 
 
 # ─── Registration ────────────────────────────────────────────
@@ -26,26 +29,35 @@ async def register_user(
     Inserts a new row into the users table. The UNIQUE constraint
     on (firstName, lastName) in the database enforces duplicate
     prevention at the storage level — no separate lookup needed.
+    The submitted password is hashed before it ever reaches the
+    database; the plain-text version is never stored anywhere.
+
+    Registration also immediately issues an access token, so the
+    frontend can treat signing up as an automatic login — no separate
+    login step required right after registering.
 
     Args:
         payload: Validated user registration data.
         db:      Scoped database connection from FastAPI dependency.
 
     Returns:
-        UserRegisterResponse containing the new userId and a message.
+        UserRegisterResponse containing the new userId, a message,
+        and a ready-to-use access token.
 
     Raises:
         HTTPException 409: If a user with the same first and last name
                            already exists.
         HTTPException 500: If any other database error occurs.
     """
+    hashed_password: str = hash_password(payload.password)
+
     try:
         cursor = db.execute(
             """
-            INSERT INTO users (firstName, lastName, email)
-            VALUES (?, ?, ?)
+            INSERT INTO users (firstName, lastName, email, password)
+            VALUES (?, ?, ?, ?)
             """,
-            (payload.firstName, payload.lastName, payload.email),
+            (payload.firstName, payload.lastName, payload.email, hashed_password),
         )
         assert cursor.lastrowid is not None, "Insert succeeded but returned no row ID"
         new_user_id: int = cursor.lastrowid
@@ -53,6 +65,7 @@ async def register_user(
         return UserRegisterResponse(
             userId=new_user_id,
             message=f"User '{payload.firstName} {payload.lastName}' registered successfully.",
+            accessToken=create_access_token(new_user_id),
         )
 
     except IntegrityError:
@@ -66,6 +79,64 @@ async def register_user(
                 ),
             },
         )
+
+
+# ─── Login ───────────────────────────────────────────────────
+
+async def login_user(
+    payload: UserLoginRequest,
+    db: sqlite3.Connection,
+) -> UserLoginResponse:
+    """
+    Verify a user's credentials and issue an access token.
+
+    Looks the user up by firstName + lastName, then checks the
+    submitted password against the stored bcrypt hash.
+
+    Deliberately returns the exact same error, with the exact same
+    message, whether the name doesn't exist at all or the password
+    was wrong for a name that does exist. This prevents "username
+    enumeration" — an attacker probing which names are registered by
+    noticing a different error message for "no such user" versus
+    "wrong password".
+
+    Args:
+        payload: Validated login credentials.
+        db:      Scoped database connection from FastAPI dependency.
+
+    Returns:
+        UserLoginResponse containing the userId, name, and a fresh
+        access token.
+
+    Raises:
+        HTTPException 401: If the name/password combination is invalid.
+    """
+    invalid_credentials_error = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "error": "Invalid credentials",
+            "message": "No account matches that name and password.",
+        },
+    )
+
+    user_row = db.execute(
+        "SELECT id, firstName, lastName, password FROM users WHERE firstName = ? AND lastName = ?",
+        (payload.firstName, payload.lastName),
+    ).fetchone()
+
+    if user_row is None:
+        raise invalid_credentials_error
+
+    if not verify_password(payload.password, user_row["password"]):
+        raise invalid_credentials_error
+
+    full_name: str = f"{user_row['firstName']} {user_row['lastName']}"
+
+    return UserLoginResponse(
+        userId=user_row["id"],
+        name=full_name,
+        accessToken=create_access_token(user_row["id"]),
+    )
 
 
 # ─── Dashboard ───────────────────────────────────────────────

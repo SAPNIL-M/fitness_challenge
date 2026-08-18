@@ -25,10 +25,18 @@ completely differently.
 - **Personal dashboard** — for each user: total points, total activities,
   their top sport, a breakdown of points by sport (donut chart), a points-
   over-time trend (area chart), and a full activity history table.
-- **No password required** — a lightweight identity system remembers who
-  you are in the browser after registering, so you can log activities and
-  see "My Dashboard" without a full login system. See `DESIGN.md` Section 6
-  for the trade-offs of this approach.
+- **Password-based login, enforced server-side** — registration requires a
+  password (hashed with bcrypt before storage), and returns a signed JWT
+  access token immediately. Logging an activity requires that token in an
+  `Authorization: Bearer <token>` header; the backend derives *who's*
+  logging the activity from the verified token itself, never from a
+  client-supplied id — so one user genuinely cannot log activities as
+  another. See [`DESIGN.md`](./DESIGN.md) Section 5.4 for how this works
+  and Section 6 for its remaining trade-offs.
+
+> **Note:** this branch (`feature/auth`) adds authentication on top of the
+> core assignment, which did not require it. The `main` branch reflects the
+> assignment's original requirements exactly, unmodified.
 
 ## Tech Stack
 - **Backend:** Python, FastAPI, SQLite
@@ -52,6 +60,20 @@ python seed.py                # optional: populates demo users and activities
 python main.py
 ```
 The API runs at `http://localhost:8000` (interactive docs at `/docs`).
+
+You'll also need a `backend/.env` file with a `JWT_SECRET_KEY` set — this is
+gitignored and not included in the repo, since it's a secret. Generate one
+yourself, e.g. `python -c "import secrets; print(secrets.token_hex(32))"`,
+and add it as:
+```
+JWT_SECRET_KEY=<your generated value>
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
+```
+
+Every user created by `seed.py` shares the password `Password123!` — handy
+for logging in as any demo user (e.g. first name `Alice`, last name
+`Johnson`) without registering a fresh account.
 
 **Frontend**
 ```

@@ -85,7 +85,6 @@ export default function Dashboard() {
 
       {isFormOpen && (
         <LogActivityForm
-          userId={userId}
           onClose={() => setIsFormOpen(false)}
           onSuccess={handleActivitySaved}
         />

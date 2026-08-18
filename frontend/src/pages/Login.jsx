@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { registerUser } from '../api/client'
+import { loginUser } from '../api/client'
 import { setCurrentUser } from '../utils/currentUser'
 
-export default function Register() {
+export default function Login() {
   const navigate = useNavigate()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -22,11 +21,9 @@ export default function Register() {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         password,
-        ...(email.trim() ? { email: email.trim() } : {}),
       }
-      const data = await registerUser(payload)
-      const fullName = `${payload.firstName} ${payload.lastName}`
-      setCurrentUser(data.userId, fullName, data.accessToken)
+      const data = await loginUser(payload)
+      setCurrentUser(data.userId, data.name, data.accessToken)
       navigate(`/dashboard/${data.userId}`)
     } catch (err) {
       setError(err.message)
@@ -36,9 +33,9 @@ export default function Register() {
 
   return (
     <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Join the Challenge</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome back</h1>
       <p className="text-gray-500 text-sm mb-6">
-        Register to log activities and appear on the leaderboard.
+        Log in to view your dashboard and log activities.
       </p>
 
       <form
@@ -83,25 +80,10 @@ export default function Register() {
             id="password"
             type="password"
             required
-            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="At least 8 characters"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="jane@example.com"
+            placeholder="Your password"
           />
         </div>
 
@@ -116,14 +98,14 @@ export default function Register() {
           disabled={isSubmitting}
           className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium text-sm rounded-lg px-4 py-2.5 transition-colors"
         >
-          {isSubmitting ? 'Registering...' : 'Register'}
+          {isSubmitting ? 'Logging in...' : 'Log in'}
         </button>
       </form>
 
       <p className="text-sm text-gray-500 text-center mt-4">
-        Already have an account?{' '}
-        <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
-          Log in
+        New here?{' '}
+        <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
+          Register
         </Link>
       </p>
     </div>

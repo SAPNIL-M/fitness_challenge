@@ -63,10 +63,13 @@ class UserRegisterRequest(BaseModel):
         firstName: User's first name. Stripped of whitespace.
         lastName:  User's last name. Stripped of whitespace.
         email:     Optional valid email address.
+        password:  Plain-text password, hashed before storage. Never
+                   stored or returned as plain text past this request.
     """
     firstName: str      = Field(..., min_length=1, max_length=50)
     lastName:  str      = Field(..., min_length=1, max_length=50)
     email:     Optional[EmailStr] = Field(default=None)
+    password:  str      = Field(..., min_length=8, max_length=72)
 
     @field_validator("firstName", "lastName")
     @classmethod
@@ -84,9 +87,39 @@ class UserRegisterRequest(BaseModel):
 class UserRegisterResponse(BaseModel):
     """
     Response returned after successful user registration.
+
+    Includes an access token so the frontend can treat registration
+    as an immediate login — no separate login step required right
+    after signing up.
     """
-    userId:  int
-    message: str
+    userId:      int
+    message:     str
+    accessToken: str
+    tokenType:   str = "bearer"
+
+
+# ─── Login Schemas ───────────────────────────────────────────
+
+class UserLoginRequest(BaseModel):
+    """
+    Payload for logging in as an existing user.
+
+    Identity is confirmed via the same firstName + lastName pairing
+    used at registration, plus the password set at that time.
+    """
+    firstName: str = Field(..., min_length=1, max_length=50)
+    lastName:  str = Field(..., min_length=1, max_length=50)
+    password:  str = Field(..., min_length=1)
+
+
+class UserLoginResponse(BaseModel):
+    """
+    Response returned after a successful login.
+    """
+    userId:      int
+    name:        str
+    accessToken: str
+    tokenType:   str = "bearer"
 
 
 # ─── Activity Schemas ────────────────────────────────────────
@@ -100,12 +133,16 @@ class ActivityRequest(BaseModel):
         - Duration:  "1:30"  (minutes:seconds)
         - Count:     "8500"  (raw step count)
 
+    Note: there is no userId field here. Which user this activity
+    belongs to is derived from the verified access token (see
+    dependencies.get_current_user_id), not from client-supplied data —
+    this is what prevents one user from logging activities as another.
+
     Validation ensures:
         1. The sport and metricType combination is valid.
         2. The metricValue format matches the metricType.
         3. All numeric values are positive.
     """
-    userId:      int        = Field(..., gt=0)
     sport:       SportType
     metricType:  MetricType
     metricValue: str        = Field(..., min_length=1)

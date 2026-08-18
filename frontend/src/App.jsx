@@ -3,6 +3,7 @@ import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-d
 import Leaderboard from './pages/Leaderboard'
 import Dashboard from './pages/Dashboard'
 import Register from './pages/Register'
+import Login from './pages/Login'
 import { getCurrentUser, clearCurrentUser } from './utils/currentUser'
 
 export default function App() {
@@ -14,10 +15,10 @@ export default function App() {
     setCurrentUserState(getCurrentUser())
   }, [location])
 
-  function handleSwitchUser() {
+  function handleLogOut() {
     clearCurrentUser()
     setCurrentUserState(null)
-    navigate('/register')
+    navigate('/login')
   }
 
   return (
@@ -66,25 +67,39 @@ export default function App() {
                   My Dashboard
                 </NavLink>
                 <button
-                  onClick={handleSwitchUser}
+                  onClick={handleLogOut}
                   className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
                 >
-                  Switch user
+                  Log out
                 </button>
               </>
             ) : (
-              <NavLink
-                to="/register"
-                className={({ isActive }) =>
-                  `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-indigo-50 text-indigo-600'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`
-                }
-              >
-                Register
-              </NavLink>
+              <>
+                <NavLink
+                  to="/login"
+                  className={({ isActive }) =>
+                    `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  Login
+                </NavLink>
+                <NavLink
+                  to="/register"
+                  className={({ isActive }) =>
+                    `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-600'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  Register
+                </NavLink>
+              </>
             )}
           </div>
 
@@ -96,6 +111,7 @@ export default function App() {
         <Routes>
           <Route path="/"                  element={<Leaderboard />} />
           <Route path="/register"          element={<Register />} />
+          <Route path="/login"             element={<Login />} />
           <Route path="/dashboard/:userId" element={<Dashboard />} />
         </Routes>
       </main>

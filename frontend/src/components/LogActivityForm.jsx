@@ -19,7 +19,7 @@ const SPORT_LABELS = {
   steps:    'Daily Steps',
 }
 
-export default function LogActivityForm({ userId, onClose, onSuccess }) {
+export default function LogActivityForm({ onClose, onSuccess }) {
   const [sport, setSport] = useState('running')
   const [distance, setDistance] = useState('')
   const [minutes, setMinutes] = useState('')
@@ -44,7 +44,6 @@ export default function LogActivityForm({ userId, onClose, onSuccess }) {
 
     try {
       const payload = {
-        userId: Number(userId),
         sport,
         metricType,
         metricValue: buildMetricValue(),

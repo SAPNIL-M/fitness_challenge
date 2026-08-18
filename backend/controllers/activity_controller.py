@@ -17,42 +17,39 @@ from services.scoring_service import calculate_points
 
 async def log_activity(
     payload: ActivityRequest,
+    current_user_id: int,
     db: sqlite3.Connection,
 ) -> ActivityResponse:
     """
     Validate, score, and persist a new fitness activity.
 
     Workflow:
-        1. Verify the userId exists in the database.
-        2. Calculate points using the scoring service.
-        3. Insert the activity with computed points into the database.
-        4. Return the full activity response.
+        1. Calculate points using the scoring service.
+        2. Insert the activity, owned by current_user_id, into the database.
+        3. Return the full activity response.
+
+    current_user_id comes from the verified access token (see
+    dependencies.get_current_user_id), not from the request body — the
+    request no longer contains a userId field at all. This is what
+    prevents one user from logging activities under another user's
+    name: the only identity the backend trusts is the one proven by
+    a valid token, never a value a client could simply type into JSON.
+    Since the token was already verified before this function runs,
+    current_user_id is guaranteed to reference a real, existing user —
+    there's no separate existence check needed here.
 
     Args:
-        payload: Validated activity data from the request body.
-        db:      Scoped database connection from FastAPI dependency.
+        payload:         Validated activity data from the request body.
+        current_user_id: The authenticated user's id, from the access
+                         token — this activity's true owner.
+        db:              Scoped database connection from FastAPI dependency.
 
     Returns:
         ActivityResponse with the assigned activityId and points awarded.
 
     Raises:
-        HTTPException 404: If the userId does not exist.
         HTTPException 500: If the database insert fails unexpectedly.
     """
-    user_exists = db.execute(
-        "SELECT 1 FROM users WHERE id = ?",
-        (payload.userId,),
-    ).fetchone()
-
-    if user_exists is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "error": "User not found",
-                "message": f"No user exists with id {payload.userId}.",
-            },
-        )
-
     points_awarded: int = calculate_points(
         sport=payload.sport,
         metric_value=payload.metricValue,
@@ -65,7 +62,7 @@ async def log_activity(
             VALUES (?, ?, ?, ?, ?)
             """,
             (
-                payload.userId,
+                current_user_id,
                 payload.sport.value,
                 payload.metricType.value,
                 payload.metricValue,

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getAccessToken } from '../utils/currentUser'
 
 const api = axios.create({
   baseURL: '/api',
@@ -8,9 +9,20 @@ const api = axios.create({
 })
 
 // ─── Request Interceptor ─────────────────────────────────────
+// Automatically attaches the stored access token, if one exists, to
+// every outgoing request. Routes that don't require auth (leaderboard,
+// dashboard, register, login) simply ignore an Authorization header
+// they don't check for — only routes that declare the auth dependency
+// (currently just POST /activities) actually verify it.
 
 api.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const token = getAccessToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
   (error) => Promise.reject(error)
 )
 
@@ -34,6 +46,9 @@ api.interceptors.response.use(
 export const registerUser = (payload) =>
   api.post('/users/register', payload)
 
+export const loginUser = (payload) =>
+  api.post('/users/login', payload)
+
 export const getUserDashboard = (userId) =>
   api.get(`/users/${userId}/dashboard`)
 
@@ -46,4 +61,3 @@ export const logActivity = (payload) =>
 
 export const getLeaderboard = () =>
   api.get('/activities/leaderboard')
-
