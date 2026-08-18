@@ -21,10 +21,6 @@ ALLOWED_ORIGINS: list[str] = [
     "http://localhost:3000",
 ]
 
-# ─── Routers ────────────────────────────────────────────────
-# Uncomment each import as we create the files
-# from routers import users, activities
-# ────────────────────────────────────────────────────────────
 
 
 @asynccontextmanager
@@ -72,7 +68,7 @@ app.add_middleware(
 
 
 # ─── Routers ────────────────────────────────────────────────
-# Uncomment each line as we create the files
+
 app.include_router(users.router,      prefix="/api/users",       tags=["Users"])
 app.include_router(activities.router, prefix="/api/activities",  tags=["Activities"])
 # ────────────────────────────────────────────────────────────

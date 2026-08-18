@@ -421,8 +421,9 @@ backend already computed.
 
 ### 5.4 Identity without authentication
 
-The assignment marks authentication as optional. Rather than build no
-identity concept at all, a lightweight approach was used: on successful
+The assignment focuses on activity tracking, scoring, and the leaderboard,
+and doesn't call out authentication as part of that scope. Rather than
+build no identity concept at all, a lightweight approach was used: on successful
 registration, the returned `userId` and display name are saved to the
 browser's `localStorage`. `App.jsx` reads this to decide what the nav bar
 shows ("Register" vs. "My Dashboard") and `Dashboard.jsx` reads it to decide
